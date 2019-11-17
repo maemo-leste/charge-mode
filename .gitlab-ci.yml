@@ -1,0 +1,38 @@
+image: alpine:3.10
+
+before_script:
+  - apk add -q cppcheck build-base sdl2-dev sdl2_ttf-dev bash
+
+stages:
+  - check
+  - build
+
+static-analysis:
+  stage: check
+  script:
+    - test/static_analysis.sh
+
+clang-format:
+  stage: check
+  before_script:
+    - apk add -q clang git
+  script:
+    - test/clang-format.sh
+
+clang-tidy:
+  image: debian:buster
+  stage: check
+  before_script:
+      - apt-get update
+      - apt-get install -y clang-tidy libsdl2-ttf-dev
+  script:
+      - clang-tidy *.h *.c
+
+build::amd64:
+  stage: build
+  script:
+    - make
+  artifacts:
+    paths:
+      - charging_sdl
+
