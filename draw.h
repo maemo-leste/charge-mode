@@ -64,6 +64,6 @@ void move_oled_rect(int w, int h, SDL_Rect* rect);
   @param numpoints the number of points in `points`
   @returns 1 on failure, 0 on success
 */
-int fill_polygon(SDL_Surface* surf, Uint32 color, SDL_Point * points, int numpoints);
+int fill_polygon(SDL_Surface* surf, Uint32 color, SDL_Point* points, int numpoints);
 
 #endif
