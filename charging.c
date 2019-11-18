@@ -194,7 +194,6 @@ int main (int argc, char** argv) {
             percent_atlas = NULL;
         }
     }
-    SDL_Rect r;
     int running = 1;
     SDL_Event ev;
     Uint32 start = SDL_GetTicks();

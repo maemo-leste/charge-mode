@@ -1,4 +1,4 @@
-#include <atlas.h>
+#include "atlas.h"
 
 void free_character_atlas (struct character_atlas* atlas) {
     free(atlas->items);
