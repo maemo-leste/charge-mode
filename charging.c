@@ -1,19 +1,19 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
 
-#ifdef USE_LIBBATTERY
-#include <libbattery/battery.h>
-#else
-#include <SDL2/SDL_power.h>
-#endif
-
+#include <sys/ioctl.h>
+#include <linux/rtc.h>
+#include <fcntl.h>
 #include <stdlib.h>
 #include <time.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <signal.h>
+#include <time.h>
 
 #include <unistd.h>
 
+#include "battery.h"
 #include "atlas.h"
 #include "draw.h"
 
@@ -21,20 +21,32 @@
 
 #define UPTIME 5
 
-sig_atomic_t running = true;
+#define RTC_DEVICE "/dev/rtc0"
 
-void intHandler(int dummy)
+sig_atomic_t running = true;
+sig_atomic_t retreason = 0;
+
+void int_handler(int dummy)
 {
     running = false;
 }
 
+void alarm_handler(int dummy)
+{
+    running = false;
+    retreason = 2;
+}
+
 void usage(char* appname)
 {
-    printf("Usage: %s [-tpc] [-f font]\n\
+    printf("Usage: %s [-tpcoearf] [-f font]\n\
     -t: launch %s in test mode\n\
     -p: display battery capacity\n\
     -c: attempt to get current\n\
     -o: prevent burn-in on OLED screens\n\
+    -r: disable exit on timer\n\
+    -e: exit immediately if not charging\n\
+    -a: exit on rtc alarm\n\
     -f: font to use\n",
         appname, appname);
 }
@@ -58,7 +70,7 @@ void usage(char* appname)
         SDL_Quit();                                             \
         if (TTF_WasInit())                                      \
             TTF_Quit();                                         \
-        exit(1);                                                \
+        exit(-1);                                                \
     }
 struct battery_device {
     double current;
@@ -66,9 +78,40 @@ struct battery_device {
     int percent;
 };
 
+int set_alarm_from_rtc(int rtc_fd)
+{
+    struct rtc_wkalrm wake;
+    struct tm tm = { 0 };
+    time_t alarm_time;
+
+    if (ioctl(rtc_fd, RTC_WKALM_RD, &wake) < 0)
+        return -1;
+
+    if (wake.enabled != 1 || wake.time.tm_year == -1)
+        return 1;
+
+    tm.tm_sec = wake.time.tm_sec;
+    tm.tm_min = wake.time.tm_min;
+    tm.tm_hour = wake.time.tm_hour;
+    tm.tm_mday = wake.time.tm_mday;
+    tm.tm_mon = wake.time.tm_mon;
+    tm.tm_year = wake.time.tm_year;
+    tm.tm_isdst = -1;  /* assume the system knows better than the RTC */
+
+    alarm_time = mktime(&tm);
+    if (alarm_time == (time_t)-1)
+        return -1;
+
+    double delta = difftime(time(NULL), alarm_time);
+
+    if (delta > 0)
+        alarm((unsigned int)delta);
+
+    return 0;
+}
+
 void update_bat_info(struct battery_device* dev)
 {
-#ifdef USE_LIBBATTERY
     struct battery_info bat;
     if (battery_fill_info(&bat)) {
         dev->current = bat.current;
@@ -78,25 +121,24 @@ void update_bat_info(struct battery_device* dev)
             dev->percent = (int)(bat.fraction * 100.0);
         }
         dev->is_charging = bat.state == CHARGING;
+        battery_dump(&bat);
+        LOG("INFO", "charging-sdl version %u", dev->percent);
     }
-#else
-    SDL_PowerState state = SDL_GetPowerInfo(NULL, NULL);
-
-    if (!(state & SDL_POWERSTATE_UNKNOWN)) {
-        SDL_GetPowerInfo(NULL, &dev->percent);
-        dev->is_charging = !(state & SDL_POWERSTATE_CHARGING);
-    }
-#endif
 }
 
 int main(int argc, char** argv)
 {
     LOG("INFO", "charging-sdl version %s", CHARGING_SDL_VERSION);
 
-    char flag_test = 0, flag_percent = 0, flag_current = 0, flag_oled = 0;
+    char flag_test = 0, flag_percent = 0, flag_current = 0, flag_timer = 1;
+    char flag_oled = 0, flag_exit = 0, flag_alarm = 0;
 
     int screen_w = 480;
     int screen_h = 800;
+
+    int rtc_fd;
+
+    int numkeys;
 
     SDL_Window* window;
     SDL_Renderer* renderer;
@@ -108,12 +150,13 @@ int main(int argc, char** argv)
     char* flag_font = NULL;
     TTF_Font* font_struct = NULL;
 
-    signal(SIGINT, intHandler);
-    signal(SIGHUP, intHandler);
-    signal(SIGTERM, intHandler);
+    signal(SIGINT, int_handler);
+    signal(SIGHUP, int_handler);
+    signal(SIGTERM, int_handler);
+    signal(SIGALRM, alarm_handler);
 
     int opt;
-    while ((opt = getopt(argc, argv, "tpcof:")) != -1) {
+    while ((opt = getopt(argc, argv, "tpcoearf:")) != -1) {
         switch (opt) {
         case 't':
             flag_test = 1;
@@ -127,23 +170,49 @@ int main(int argc, char** argv)
         case 'o':
             flag_oled = 1;
             break;
+        case 'e':
+            flag_exit = 1;
+            break;
+        case 'a':
+            flag_alarm = 1;
+            break;
+        case 'r':
+            flag_timer = 0;
+            break;
         case 'f':
             flag_font = optarg;
             break;
         default:
             usage(argv[0]);
-            exit(1);
+            return -1;
         }
     }
+
+    rtc_fd = open(RTC_DEVICE, O_RDONLY | O_CLOEXEC);
+    if(rtc_fd < 0) {
+        LOG("INFO", "failed to open RTC: %s", RTC_DEVICE);
+    } else if (set_alarm_from_rtc(rtc_fd) != 0) {
+        LOG("INFO", "failed to read RTC: %s", RTC_DEVICE);
+    }
+
+    if(rtc_fd >= 0)
+        close(rtc_fd);
+
+    if (flag_exit) {
+        update_bat_info(&bat_info);
+        if (!bat_info.is_charging)
+            return retreason;
+    }
+
     if (SDL_Init(SDL_INIT_EVENTS | SDL_INIT_VIDEO) < 0) {
         ERROR("failed to init SDL: %s", SDL_GetError());
-        exit(1);
+        return -1;
     }
     if ((flag_percent || flag_current) && flag_font) {
         if (TTF_Init() < 0) {
             ERROR("failed to init SDL: %s", TTF_GetError());
             SDL_Quit();
-            exit(1);
+            return -1;
         }
     }
 
@@ -157,7 +226,7 @@ int main(int argc, char** argv)
         if (SDL_GetDisplayMode(0, 0, &mode) != 0) {
             ERROR("error fetching display mode: %s", SDL_GetError());
             SDL_Quit();
-            exit(1);
+            return -1;
         }
         screen_w = mode.w;
         screen_h = mode.h;
@@ -167,6 +236,8 @@ int main(int argc, char** argv)
             0, 0, SDL_WINDOW_FULLSCREEN | SDL_WINDOW_SHOWN);
     }
     CHECK_CREATE_SUCCESS(window);
+
+    printf("using video driver: %s", SDL_GetCurrentVideoDriver());
 
     LOG("INFO", "creating general renderer");
     renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_SOFTWARE);
@@ -202,7 +273,7 @@ int main(int argc, char** argv)
                 ERROR("no font specified");
                 TTF_Quit();
                 SDL_Quit();
-                exit(1);
+                return -1;
             }
             SDL_Color color = { 255, 255, 255 };
             font_struct = TTF_OpenFont(flag_font, 256);
@@ -210,7 +281,7 @@ int main(int argc, char** argv)
                 ERROR("failed to open font: %s\n", TTF_GetError());
                 TTF_Quit();
                 SDL_Quit();
-                exit(1);
+                return -1;
             }
             percent_atlas = create_character_atlas(renderer, "0123456789A.", color, font_struct);
             if (percent_atlas) {
@@ -219,7 +290,7 @@ int main(int argc, char** argv)
                 ERROR("failed to create font: %s\n", TTF_GetError());
                 TTF_Quit();
                 SDL_Quit();
-                exit(1);
+                return -1;
             }
         } else {
             LOG("WARNING", "no font set, turning off text renderering");
@@ -239,12 +310,12 @@ int main(int argc, char** argv)
         SDL_SetRenderDrawColor(renderer, 128, 128, 128, 255);
     }
 
-    bat_info.current = -1.0f;
-    bat_info.is_charging = 0;
-    bat_info.percent = -1;
-
     Uint32 start_time = 0;
     Uint32 end_time = 0;
+
+    int not_charging_timer=0;
+
+    int *keys;
 
     char percent_text[4];
     char current_text[6];
@@ -269,6 +340,7 @@ int main(int argc, char** argv)
                     battery_area.y + battery_area.h / 2);
             }
         }
+
         if (bat_info.is_charging) {
             sprintf(current_text, "%2.1fA", bat_info.current);
             if (flag_current && bat_info.current > 0 && percent_atlas) {
@@ -276,23 +348,38 @@ int main(int argc, char** argv)
                     is_charging_area.w - is_charging_area.w * 0.05, is_charging_area.h + is_charging_area.h * 1.5);
             }
             SDL_RenderCopy(renderer, lightning_icon_texture, NULL, &is_charging_area);
+            not_charging_timer = 0;
+        } else if (flag_exit && ++not_charging_timer > 5) {
+                retreason = 1;
+                running = false;
         }
+
         if (flag_oled) {
             SDL_RenderFillRect(renderer, &oled_rect);
             move_oled_rect(screen_w, screen_h, &oled_rect);
         }
+
+        const uint8_t *keys = SDL_GetKeyboardState(&numkeys);
+        LOG("INFO", "numkeys %u, %u", numkeys, keys[SDL_SCANCODE_X]);
+        if (SDL_SCANCODE_KP_POWER <= numkeys && keys[SDL_SCANCODE_KP_POWER] == 1) {
+            retreason = 0;
+            running = false;
+        }
+
         SDL_RenderPresent(renderer);
         if (flag_test) {
             while (SDL_PollEvent(&ev)) {
                 switch (ev.type) {
                 case SDL_QUIT:
+                    retreason = 0;
                     running = false;
                     break;
                 }
             }
         } else {
             SDL_Delay(1000);
-            if (SDL_GetTicks() - start >= UPTIME * 1000) {
+            if (flag_timer && SDL_GetTicks() - start >= UPTIME * 1000) {
+                retreason = 0;
                 running = false;
             }
             SDL_RenderClear(renderer);
@@ -314,4 +401,5 @@ int main(int argc, char** argv)
     if (TTF_WasInit())
         TTF_Quit();
     SDL_Quit();
+    return retreason;
 }
