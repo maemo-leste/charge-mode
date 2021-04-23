@@ -9,6 +9,8 @@
 
 #include <stdlib.h>
 #include <time.h>
+#include <stdbool.h>
+#include <signal.h>
 
 #include <unistd.h>
 
@@ -18,6 +20,13 @@
 #define CHARGING_SDL_VERSION "0.1.0"
 
 #define UPTIME 5
+
+sig_atomic_t running = true;
+
+void intHandler(int dummy)
+{
+    running = false;
+}
 
 void usage(char* appname)
 {
@@ -68,7 +77,7 @@ void update_bat_info(struct battery_device* dev)
         } else {
             dev->percent = (int)(bat.fraction * 100.0);
         }
-        dev->is_charging = bat.state & CHARGING;
+        dev->is_charging = bat.state == CHARGING;
     }
 #else
     SDL_PowerState state = SDL_GetPowerInfo(NULL, NULL);
@@ -98,6 +107,10 @@ int main(int argc, char** argv)
     struct character_atlas* percent_atlas = NULL;
     char* flag_font = NULL;
     TTF_Font* font_struct = NULL;
+
+    signal(SIGINT, intHandler);
+    signal(SIGHUP, intHandler);
+    signal(SIGTERM, intHandler);
 
     int opt;
     while ((opt = getopt(argc, argv, "tpcof:")) != -1) {
@@ -213,7 +226,6 @@ int main(int argc, char** argv)
             percent_atlas = NULL;
         }
     }
-    int running = 1;
     SDL_Event ev;
     Uint32 start = SDL_GetTicks();
 
@@ -274,14 +286,14 @@ int main(int argc, char** argv)
             while (SDL_PollEvent(&ev)) {
                 switch (ev.type) {
                 case SDL_QUIT:
-                    running = 0;
+                    running = false;
                     break;
                 }
             }
         } else {
             SDL_Delay(1000);
             if (SDL_GetTicks() - start >= UPTIME * 1000) {
-                running = 0;
+                running = false;
             }
             SDL_RenderClear(renderer);
         }
