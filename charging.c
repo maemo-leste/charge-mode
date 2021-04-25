@@ -39,7 +39,7 @@ void alarm_handler(int dummy)
 
 void usage(char* appname)
 {
-    printf("Usage: %s [-tpcoearf] [-f font]\n\
+    printf("Usage: %s [-tpcoearwf] [-f font]\n\
     -t: launch %s in test mode\n\
     -p: display battery capacity\n\
     -c: attempt to get current\n\
@@ -47,6 +47,7 @@ void usage(char* appname)
     -r: disable exit on timer\n\
     -e: exit immediately if not charging\n\
     -a: exit on rtc alarm\n\
+    -w: run in window\n\
     -f: font to use\n",
         appname, appname);
 }
@@ -121,20 +122,19 @@ void update_bat_info(struct battery_device* dev)
             dev->percent = (int)(bat.fraction * 100.0);
         }
         dev->is_charging = bat.state == CHARGING;
-        battery_dump(&bat);
-        LOG("INFO", "charging-sdl version %u", dev->percent);
     }
 }
 
 int main(int argc, char** argv)
 {
+    SDL_LogSetPriority(SDL_LOG_CATEGORY_VIDEO ,SDL_LOG_PRIORITY_DEBUG);
     LOG("INFO", "charging-sdl version %s", CHARGING_SDL_VERSION);
 
     char flag_test = 0, flag_percent = 0, flag_current = 0, flag_timer = 1;
-    char flag_oled = 0, flag_exit = 0, flag_alarm = 0;
+    char flag_oled = 0, flag_exit = 0, flag_alarm = 0, flag_window=0;
 
-    int screen_w = 480;
-    int screen_h = 800;
+    int screen_w = 540;
+    int screen_h = 960;
 
     int rtc_fd;
 
@@ -156,7 +156,7 @@ int main(int argc, char** argv)
     signal(SIGALRM, alarm_handler);
 
     int opt;
-    while ((opt = getopt(argc, argv, "tpcoearf:")) != -1) {
+    while ((opt = getopt(argc, argv, "tpcoearwf:")) != -1) {
         switch (opt) {
         case 't':
             flag_test = 1;
@@ -178,6 +178,9 @@ int main(int argc, char** argv)
             break;
         case 'r':
             flag_timer = 0;
+            break;
+        case 'w':
+            flag_window = 1;
             break;
         case 'f':
             flag_font = optarg;
@@ -216,7 +219,7 @@ int main(int argc, char** argv)
         }
     }
 
-    if (flag_test) {
+    if (flag_test || flag_window) {
         LOG("INFO", "creating test window");
         window = SDL_CreateWindow("Charge - Test Mode",
             SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
@@ -349,7 +352,7 @@ int main(int argc, char** argv)
             }
             SDL_RenderCopy(renderer, lightning_icon_texture, NULL, &is_charging_area);
             not_charging_timer = 0;
-        } else if (flag_exit && ++not_charging_timer > 5) {
+        } else if (flag_exit && ++not_charging_timer > 3) {
                 retreason = 1;
                 running = false;
         }
@@ -359,8 +362,6 @@ int main(int argc, char** argv)
             move_oled_rect(screen_w, screen_h, &oled_rect);
         }
 
-        const uint8_t *keys = SDL_GetKeyboardState(&numkeys);
-        LOG("INFO", "numkeys %u, %u", numkeys, keys[SDL_SCANCODE_X]);
         if (SDL_SCANCODE_KP_POWER <= numkeys && keys[SDL_SCANCODE_KP_POWER] == 1) {
             retreason = 0;
             running = false;
@@ -377,6 +378,16 @@ int main(int argc, char** argv)
                 }
             }
         } else {
+            while (SDL_PollEvent(&ev)){
+                if (ev.type == SDL_KEYDOWN) {
+                    /* Droid 4 power button registers as 1073741824 this is a sdl bug*/
+                    if(ev.key.keysym.sym == SDL_SCANCODE_POWER || ev.key.keysym.sym == 1073741824) {
+                        retreason = 0;
+                        running = false;
+                        break;
+                    }
+                }
+            }
             SDL_Delay(1000);
             if (flag_timer && SDL_GetTicks() - start >= UPTIME * 1000) {
                 retreason = 0;
