@@ -8,6 +8,10 @@ LIBS       := $(SDL2_LIBS) -lSDL2_ttf -lm
 
 SOURCES    := ${wildcard *.c}
 OBJECTS    := $(SOURCES:%.c=%.o)
+INSTALL := install -o root -g root --mode=755
+INSTALL_DIR := install -d
+BINDIR := $(DESTDIR)/usr/bin
+INITDIR := $(DESTDIR)/etc/init.d
 
 all: charging_sdl
 
@@ -18,6 +22,13 @@ all: charging_sdl
 charging_sdl: $(OBJECTS)
 	@echo LD $@
 	@$(CC) -o $@ $^ $(CCFLAGS) $(LIBS)
+
+install: all
+	$(INSTALL_DIR) $(BINDIR)
+	$(INSTALL_DIR) $(INITDIR)
+	$(INSTALL) charging_sdl $(BINDIR)
+	$(INSTALL) charge-mode.sh $(BINDIR)
+	$(INSTALL) charge-mode $(INITDIR)
 
 .PHONY: clean
 

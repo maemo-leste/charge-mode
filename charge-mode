@@ -1,0 +1,13 @@
+#!/sbin/openrc-run
+
+description="This init script starts charge mode script for leste"
+name="Mode Control Entity."
+
+start() {
+	/usr/bin/charge-mode.sh &
+}
+
+stop() {
+    echo no-op
+}
+
