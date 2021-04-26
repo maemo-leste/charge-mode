@@ -1,8 +1,8 @@
-#!/bin/bash
+#!/bin/sh
 
 font=$(fc-match --format=%{file} DejaVuSans.tff)
 
-xinit /bin/bash -c "charging_sdl -wcreapf $font; echo -n \$? > /var/run/chargingret" -- vt1
+xinit /bin/sh -c "charging_sdl -wcreapf $font; echo -n \$? > /var/run/chargingret" -- vt1
 
 retreason=$(cat /var/run/chargingret)
 
