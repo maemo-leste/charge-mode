@@ -3,13 +3,16 @@ Section: base
 Priority: optional
 Maintainer: Uvos <carl@uvos.xyz>
 Build-Depends:
- debhelper (>= 10),
+ debhelper-compat (= 12),
+ libsdl2-dev,
+ libsdl2-ttf-dev,
 Standards-Version: 4.3.0
 
 Package: charge-mode
 Architecture: any
 Multi-arch: same
-Depends:
+Depends: ${shlibs:Depends}, ${misc:Depends},
+ openrc,
  fontconfig,
  fonts-dejavu-core,
  xinit,
