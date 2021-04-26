@@ -11,6 +11,7 @@ Architecture: any
 Multi-arch: same
 Depends:
  fontconfig,
+ fonts-dejavu-core,
  xinit,
  libsdl2-2.0-0
 Description: This provides charging mode on leste devices
