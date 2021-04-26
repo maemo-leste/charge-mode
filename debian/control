@@ -1,0 +1,17 @@
+Source: charge-mode
+Section: base
+Priority: optional
+Maintainer: Uvos <carl@uvos.xyz>
+Build-Depends:
+ debhelper (>= 10),
+Standards-Version: 4.3.0
+
+Package: charge-mode
+Architecture: any
+Multi-arch: same
+Depends:
+ fontconfig,
+ xinit,
+ libsdl2-2.0-0
+Description: This provides charging mode on leste devices
+

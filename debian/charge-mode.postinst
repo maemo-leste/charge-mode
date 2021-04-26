@@ -1,0 +1,4 @@
+#!/bin/sh
+
+install -d /etc/runlevels/charge-mode/
+rc-update add charge-mode charge-mode
