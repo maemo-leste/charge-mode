@@ -23,8 +23,14 @@
 
 #define RTC_DEVICE "/dev/rtc0"
 
+enum {
+    EXIT_BOOT = 0,
+    EXIT_SHUTDOWN = 1,
+    EXIT_ALARM = 2
+};
+
 sig_atomic_t running = true;
-sig_atomic_t retreason = 0;
+sig_atomic_t retreason = EXIT_BOOT;
 
 void int_handler(int dummy)
 {
@@ -34,7 +40,7 @@ void int_handler(int dummy)
 void alarm_handler(int dummy)
 {
     running = false;
-    retreason = 2;
+    retreason = EXIT_ALARM;
 }
 
 void usage(char* appname)
@@ -353,7 +359,7 @@ int main(int argc, char** argv)
             SDL_RenderCopy(renderer, lightning_icon_texture, NULL, &is_charging_area);
             not_charging_timer = 0;
         } else if (flag_exit && ++not_charging_timer > 3) {
-                retreason = 1;
+                retreason = EXIT_SHUTDOWN;
                 running = false;
         }
 
@@ -363,7 +369,7 @@ int main(int argc, char** argv)
         }
 
         if (SDL_SCANCODE_KP_POWER <= numkeys && keys[SDL_SCANCODE_KP_POWER] == 1) {
-            retreason = 0;
+            retreason = EXIT_BOOT;
             running = false;
         }
 
@@ -372,7 +378,7 @@ int main(int argc, char** argv)
             while (SDL_PollEvent(&ev)) {
                 switch (ev.type) {
                 case SDL_QUIT:
-                    retreason = 0;
+                    retreason = EXIT_BOOT;
                     running = false;
                     break;
                 }
@@ -382,7 +388,7 @@ int main(int argc, char** argv)
                 if (ev.type == SDL_KEYDOWN) {
                     /* Droid 4 power button registers as 1073741824 this is a sdl bug*/
                     if(ev.key.keysym.sym == SDL_SCANCODE_POWER || ev.key.keysym.sym == 1073741824) {
-                        retreason = 0;
+                        retreason = EXIT_BOOT;
                         running = false;
                         break;
                     }
@@ -390,7 +396,7 @@ int main(int argc, char** argv)
             }
             SDL_Delay(1000);
             if (flag_timer && SDL_GetTicks() - start >= UPTIME * 1000) {
-                retreason = 0;
+                retreason = EXIT_BOOT;
                 running = false;
             }
             SDL_RenderClear(renderer);
