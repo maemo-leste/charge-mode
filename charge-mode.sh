@@ -1,10 +1,13 @@
 #!/bin/sh
 
+export DFBARGS="system=fbdev,no-cursor,linux-input-grab"
+export SDL_VIDEODRIVER=directfb
+
 font=$(fc-match --format=%{file} DejaVuSans.tff)
 
-xinit /bin/sh -c "charging_sdl -wcreapf $font; echo -n \$? > /var/run/chargingret" -- vt1
+charging_sdl -wcreapf $font
 
-retreason=$(cat /var/run/chargingret)
+retreason=$?
 
 if [ $retreason -lt 0 ]; then
     echo charging_sdl failed! booting default runlevel
