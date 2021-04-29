@@ -9,10 +9,7 @@ charging_sdl -wcreapf $font
 
 retreason=$?
 
-if [ $retreason -lt 0 ]; then
-    echo charging_sdl failed! booting default runlevel
-    openrc default
-elif [ $retreason -eq 0 ]; then
+if [ $retreason -eq 0 ]; then
     echo booting default runlevel
     openrc default
 elif [ $retreason -eq 1 ]; then
@@ -20,5 +17,8 @@ elif [ $retreason -eq 1 ]; then
     poweroff
 elif [ $retreason -eq 2 ]; then
     echo booting default runlevel due to rtc alarm
+    openrc default
+else
+    echo charging_sdl failed! booting default runlevel
     openrc default
 fi
