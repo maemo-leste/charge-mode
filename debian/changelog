@@ -1,5 +1,7 @@
+charge-mode (1.0.1) unstable; urgency=medium
+  Switch to directfb, add hack to keep mapphones happy
+ -- Uvos <carl@uvos.xyz>  Mon, 29 Jun 2021 23:00:00 +0100
+
 charge-mode (1.0.0) unstable; urgency=medium
-
-  * Inital version
-
- -- Uvos <carl@uvos.xyz>  Mon, 10 Jun 2020 15:00:00 +0100
+  Inital version
+ -- Uvos <carl@uvos.xyz>  Mon, 10 Jun 2021 15:00:00 +0100
