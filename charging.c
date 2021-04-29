@@ -146,6 +146,11 @@ int main(int argc, char** argv)
 
     int numkeys;
 
+    // needed only for mapphone specific hack
+    int fb = open("/dev/fb0", O_RDWR);
+    if(fb < 0)
+        LOG("INFO", "failed to open framebuffer /dev/fb0");
+
     SDL_Window* window;
     SDL_Renderer* renderer;
 
@@ -400,6 +405,13 @@ int main(int argc, char** argv)
                 running = false;
             }
             SDL_RenderClear(renderer);
+
+            // HACK: get mapphone comand mode displays to work
+            if (fb >= 0) {
+                lseek(fb, 0, SEEK_SET);
+                char tmp = 0;
+                write(fb, &tmp, 1);
+            }
         }
     }
 
