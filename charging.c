@@ -415,8 +415,6 @@ int main(int argc, char** argv)
         }
     }
 
-    close(fb);
-
     if (percent_atlas)
         free_character_atlas(percent_atlas);
     if (font_struct)
