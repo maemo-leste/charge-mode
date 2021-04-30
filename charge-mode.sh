@@ -1,6 +1,6 @@
 #!/bin/sh
 
-export DFBARGS="system=fbdev,no-cursor,linux-input-grab"
+export DFBARGS="system=fbdev,no-cursor"
 export SDL_VIDEODRIVER=directfb
 
 font=$(fc-match --format=%{file} DejaVuSans.tff)
