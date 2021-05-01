@@ -387,7 +387,7 @@ int main(int argc, char** argv)
             while (SDL_PollEvent(&ev)){
                 if (ev.type == SDL_KEYDOWN) {
                     /* Droid 4 power button registers as 1073741824 this is a sdl bug*/
-                    if(ev.key.keysym.sym == SDL_SCANCODE_POWER || ev.key.keysym.sym == 1073741824) {
+                    if(ev.key.keysym.sym == SDLK_POWER || ev.key.keysym.sym == 1073741824) {
                         retreason = EXIT_BOOT;
                         running = false;
                         break;
