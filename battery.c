@@ -102,8 +102,13 @@ static inline int fuel_level_LiIon(int mV, int mA, int mOhm)
 		return max(((mV - 3300) * ((3756 - 3300) * 1966)) / 100000, 0);
 	}
 
-	/* apply second part of formula */
-	return min((int)(1966 + sqrt(u))/100, 100);
+	/* apply second part of formula **/
+	int percent = min((int)(1966 + sqrt(u))/100, 100);
+    if (percent < 0)
+		percent = 0;
+    else if (percent > 100)
+		percent = 100;
+	return percent;
 }
 
 double battery_estimate(struct battery_info *i)
@@ -252,7 +257,7 @@ battery_fill_info(struct battery_info *i)
 			else
 				i->temperature = NAN;
 
-			if (isnan(i->fraction))
+			if (isnan(i->fraction) || i->fraction > 100 || i->fraction < 0)
 				i->fraction = battery_estimate(i);
 		}
 	}
