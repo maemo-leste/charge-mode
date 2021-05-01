@@ -19,7 +19,7 @@
 
 #define CHARGING_SDL_VERSION "0.1.0"
 
-#define UPTIME 5
+#define SCREENTIME 5
 
 #define RTC_DEVICE "/dev/rtc0"
 
@@ -308,6 +308,7 @@ int main(int argc, char** argv)
     }
     SDL_Event ev;
     Uint32 start = SDL_GetTicks();
+    Uint32 last_charging = SDL_GetTicks();
 
     SDL_Rect battery_area;
     make_battery_rect(screen_w, screen_h, &battery_area);
@@ -318,11 +319,6 @@ int main(int argc, char** argv)
         make_oled_rect(screen_h, &oled_rect);
         SDL_SetRenderDrawColor(renderer, 128, 128, 128, 255);
     }
-
-    Uint32 start_time = 0;
-    Uint32 end_time = 0;
-
-    int not_charging_timer=0;
 
     int *keys;
 
@@ -357,8 +353,8 @@ int main(int argc, char** argv)
                     is_charging_area.w - is_charging_area.w * 0.05, is_charging_area.h + is_charging_area.h * 1.5);
             }
             SDL_RenderCopy(renderer, lightning_icon_texture, NULL, &is_charging_area);
-            not_charging_timer = 0;
-        } else if (flag_exit && ++not_charging_timer > 3) {
+            last_charging = SDL_GetTicks();
+        } else if (flag_exit && SDL_GetTicks() - last_charging >= 2000) {
                 retreason = EXIT_SHUTDOWN;
                 running = false;
         }
@@ -392,12 +388,17 @@ int main(int argc, char** argv)
                         running = false;
                         break;
                     }
+                    SDL_SetWindowBrightness(window, 1);
                 }
             }
             SDL_Delay(1000);
-            if (flag_timer && SDL_GetTicks() - start >= UPTIME * 1000) {
+            if (SDL_GetTicks() - start >= SCREENTIME * 1000) {
+                if (flag_timer) {
                 retreason = EXIT_BOOT;
                 running = false;
+                } else {
+                    SDL_SetWindowBrightness(window, 0);
+                }
             }
             SDL_RenderClear(renderer);
         }
