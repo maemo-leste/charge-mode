@@ -1,3 +1,7 @@
+charge-mode (1.1.1) unstable; urgency=medium
+  * fix mathimatical mistake in fuel_level_LiIon
+ -- Uvos <carl@uvos.xyz>  Mon, 14 Jun 2021 10:00:00 +0100
+
 charge-mode (1.1.0) unstable; urgency=medium
 
   * make fraction a bit more robust
