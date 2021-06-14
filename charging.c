@@ -381,7 +381,7 @@ int main(int argc, char** argv)
                         running = false;
                         break;
                     }
-                    SDL_SetWindowBrightness(window, 1);
+                    //SDL_SetWindowBrightness(window, 1);
                 }
             }
             SDL_Delay(1000);
@@ -390,7 +390,7 @@ int main(int argc, char** argv)
                 retreason = EXIT_BOOT;
                 running = false;
                 } else {
-                    SDL_SetWindowBrightness(window, 0);
+                    //SDL_SetWindowBrightness(window, 0);
                 }
             }
             SDL_RenderClear(renderer);
