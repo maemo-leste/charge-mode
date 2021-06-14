@@ -144,8 +144,6 @@ int main(int argc, char** argv)
 
     int rtc_fd;
 
-    int numkeys;
-
     SDL_Window* window;
     SDL_Renderer* renderer;
 
@@ -362,11 +360,6 @@ int main(int argc, char** argv)
         if (flag_oled) {
             SDL_RenderFillRect(renderer, &oled_rect);
             move_oled_rect(screen_w, screen_h, &oled_rect);
-        }
-
-        if (SDL_SCANCODE_KP_POWER <= numkeys && keys[SDL_SCANCODE_KP_POWER] == 1) {
-            retreason = EXIT_BOOT;
-            running = false;
         }
 
         SDL_RenderPresent(renderer);
