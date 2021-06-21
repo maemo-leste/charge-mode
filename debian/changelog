@@ -1,3 +1,7 @@
+charge-mode (1.1.2) unstable; urgency=medium
+  * Check if usb is connected instead of looking relying on battery state value
+ -- Uvos <carl@uvos.xyz>  Tue, 23 Jun 2021 01:00:00 +0100
+
 charge-mode (1.1.1) unstable; urgency=medium
   * fix mathimatical mistake in fuel_level_LiIon
  -- Uvos <carl@uvos.xyz>  Mon, 14 Jun 2021 10:00:00 +0100
