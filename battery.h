@@ -15,12 +15,18 @@ enum battery_state {
   FULL,
 };
 
+enum power_state {
+  BATTERY,
+  USB,
+  UNKOWN,
+};
+
 struct battery {
 };
 
 struct battery_info {
 	struct battery *battery;
-
+	enum power_state source;
 	enum battery_state state;
 	double fraction; /* 1 == 100% */
 	double seconds;

@@ -136,12 +136,14 @@ battery_fill_info(struct battery_info *i)
 		return false;
 	}
 
-	i->state = NO_BATTERY;  /* assume we're just plugged in. */
-        i->seconds = NAN;
-        i->fraction = NAN;
-        i->voltage = NAN;
-        i->current = NAN;
-        i->temperature = NAN;
+	/* assume we're just plugged in. */
+	i->state = NO_BATTERY;
+	i->seconds = NAN;
+	i->fraction = NAN;
+	i->voltage = NAN;
+	i->current = NAN;
+	i->temperature = NAN;
+	i->source = UNKOWN;
 
 	while ((dent = readdir(dirp)) != NULL) {
 		const char *name = dent->d_name;
@@ -153,15 +155,10 @@ battery_fill_info(struct battery_info *i)
 		int vlt = -1;
 		int cur = -999999999;
 		int temp = -999999999;
+		enum power_state type = UNKOWN;
 
 		if ((strcmp(name, ".") == 0) || (strcmp(name, "..") == 0)) {
 			continue;  /* skip these, of course. */
-		}
-		if (!read_power_file(base, name, "type", str, sizeof (str))) {
-			continue;  /* Don't know _what_ we're looking at. Give up on it. */
-		}
-		if (strcmp(str, "Battery\n") != 0) {
-			continue;  /* we don't care about UPS and such. */
 		}
 
 		if (!strcmp(name, "rx51-battery")) {
@@ -170,6 +167,16 @@ battery_fill_info(struct battery_info *i)
 		  */
 			continue;
 		}
+
+		if (!read_power_file(base, name, "type", str, sizeof (str))) {
+			continue;  /* Don't know _what_ we're looking at. Give up on it. */
+		}
+		if (strcmp(str, "Battery\n") == 0)
+			type = BATTERY;
+		else if (strcmp(str, "USB\n") == 0 )
+			type = USB;
+		if (type == UNKOWN)
+			continue;
 
 
 		/* if the scope is "device," it might be something like a PS4
@@ -182,85 +189,94 @@ battery_fill_info(struct battery_info *i)
 			}
 		}
 
-		/* some drivers don't offer this, so if it's not explicitly reported assume it's present. */
-		if (read_power_file(base, name, "present", str, sizeof (str)) && (strcmp(str, "0\n") == 0)) {
-			st = NO_BATTERY;
-		} else if (!read_power_file(base, name, "status", str, sizeof (str))) {
-			st = UNKNOWN;  /* uh oh */
-		} else if (strcmp(str, "Charging\n") == 0) {
-			st = CHARGING;
-		} else if (strcmp(str, "Discharging\n") == 0) {
-			st = ON_BATTERY;
-		} else if ((strcmp(str, "Full\n") == 0) || (strcmp(str, "Not charging\n") == 0)) {
-			st = FULL;
-		} else {
-			st = UNKNOWN;  /* uh oh */
-		}
+		if(type == BATTERY) {
+			/* some drivers don't offer this, so if it's not explicitly reported assume it's present. */
+			if (read_power_file(base, name, "present", str, sizeof (str)) && (strcmp(str, "0\n") == 0)) {
+				st = NO_BATTERY;
+			} else if (!read_power_file(base, name, "status", str, sizeof (str))) {
+				st = UNKNOWN;  /* uh oh */
+			} else if (strcmp(str, "Charging\n") == 0) {
+				st = CHARGING;
+			} else if (strcmp(str, "Discharging\n") == 0) {
+				st = ON_BATTERY;
+			} else if ((strcmp(str, "Full\n") == 0) || (strcmp(str, "Not charging\n") == 0)) {
+				st = FULL;
+			} else {
+				st = UNKNOWN;  /* uh oh */
+			}
+			if (read_power_file(base, name, "capacity", str, sizeof (str))) {
+				pct = atoi(str);
+				pct = (pct > 100) ? 100 : pct; /* clamp between 0%, 100% */
+			}
 
-		if (read_power_file(base, name, "capacity", str, sizeof (str))) {
-			pct = atoi(str);
-			pct = (pct > 100) ? 100 : pct; /* clamp between 0%, 100% */
-		}
+			if (read_power_file(base, name, "voltage_now", str, sizeof (str))) {
+				vlt = atoi(str);
+			}
 
-		if (read_power_file(base, name, "voltage_now", str, sizeof (str))) {
-			vlt = atoi(str);
-		}
+			if (read_power_file(base, name, "current_now", str, sizeof (str))) {
+				cur = atoi(str);
+			}
 
-		if (read_power_file(base, name, "current_now", str, sizeof (str))) {
-			cur = atoi(str);
-		}
+			if (read_power_file(base, name, "temp", str, sizeof (str))) {
+				temp = atoi(str);
+			}
 
-		if (read_power_file(base, name, "temp", str, sizeof (str))) {
-			temp = atoi(str);
-		}
+			if (read_power_file(base, name, "time_to_empty_now", str, sizeof (str))) {
+				secs = atoi(str);
+				secs = (secs <= 0) ? -1 : secs;  /* 0 == unknown */
+			}
 
-		if (read_power_file(base, name, "time_to_empty_now", str, sizeof (str))) {
-			secs = atoi(str);
-			secs = (secs <= 0) ? -1 : secs;  /* 0 == unknown */
-		}
+			/*
+			* We pick the battery that claims to have the most minutes left.
+			*  (failing a report of minutes, we'll take the highest percent.)
+			*/
 
-		/*
-		 * We pick the battery that claims to have the most minutes left.
-		 *  (failing a report of minutes, we'll take the highest percent.)
-		 */
-
-		if ((secs < 0) && (isnan(i->seconds))) {
-		  if ((pct < 0) && (isnan(i->fraction))) {
-				choose = true;  /* at least we know there's a battery. */
-			} else if (pct > i->fraction * 100) {
+			if ((secs < 0) && (isnan(i->seconds))) {
+			if ((pct < 0) && (isnan(i->fraction))) {
+					choose = true;  /* at least we know there's a battery. */
+				} else if (pct > i->fraction * 100) {
+					choose = true;
+				}
+			} else if (secs > i->seconds) {
 				choose = true;
 			}
-		} else if (secs > i->seconds) {
-			choose = true;
+
+			if (choose) {
+				printf("choosen: %s\n", name);
+				if (secs != -1)
+					i->seconds = secs;
+				else
+					i->seconds = NAN;
+				if (pct != -1)
+					i->fraction = pct/100.;
+				else
+					i->fraction = NAN;
+				i->state = st;
+				if (vlt != -1)
+					i->voltage = vlt/1000000.;
+				else
+					i->voltage = NAN;
+				if (cur != -999999999)
+					i->current = cur/1000000.;
+				else
+					i->current = NAN;
+				if (temp != -999999999)
+					i->temperature = temp/10.;
+				else
+					i->temperature = NAN;
+
+				if (isnan(i->fraction) || i->fraction > 100 || i->fraction < 0)
+					i->fraction = battery_estimate(i);
+			}
 		}
 
-		if (choose) {
-		  	printf("choosen: %s\n", name);
-			if (secs != -1)
-				i->seconds = secs;
-			else
-				i->seconds = NAN;
-			if (pct != -1)
-				i->fraction = pct/100.;
-			else
-				i->fraction = NAN;
-			i->state = st;
-			if (vlt != -1)
-				i->voltage = vlt/1000000.;
-			else
-				i->voltage = NAN;
-			if (cur != -999999999)
-				i->current = cur/1000000.;
-			else
-				i->current = NAN;
-			if (temp != -999999999)
-				i->temperature = temp/10.;
-			else
-				i->temperature = NAN;
-
-			if (isnan(i->fraction) || i->fraction > 100 || i->fraction < 0)
-				i->fraction = battery_estimate(i);
+		if (type == USB && read_power_file(base, name, "online", str, sizeof (str))) {
+			if (strcmp(str, "0\n") == 0)
+				i->source = BATTERY;
+			else if (strcmp(str, "0\n") == 1)
+				i->source = USB;
 		}
+
 	}
 
 	closedir(dirp);

@@ -127,7 +127,7 @@ void update_bat_info(struct battery_device* dev)
         } else {
             dev->percent = (int)(bat.fraction * 100.0);
         }
-        dev->is_charging = bat.state == CHARGING;
+        dev->is_charging = bat.source == USB;
     }
 }
 
