@@ -5,7 +5,7 @@ export SDL_VIDEODRIVER=directfb
 
 font=$(fc-match --format=%{file} DejaVuSans.tff)
 
-charging_sdl -wcreapf $font
+charging_sdl -creapf $font
 
 retreason=$?
 
