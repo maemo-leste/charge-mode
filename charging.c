@@ -330,7 +330,7 @@ int main(int argc, char** argv)
         SDL_RenderCopy(renderer, battery_icon_texture, NULL, NULL);
 
         if (flag_percent && percent_atlas && bat_info.percent > 0) {
-            sprintf(percent_text, "%d", bat_info.percent);
+            sprintf(percent_text, "%02d%%", bat_info.percent);
             if (percent_text[2]) {
                 character_atlas_render_string(renderer, percent_atlas, percent_text,
                     battery_area.w * 0.8,
