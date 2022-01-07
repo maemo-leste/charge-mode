@@ -1,11 +1,7 @@
 #!/bin/sh
 
-export DFBARGS="system=fbdev,no-cursor"
-export SDL_VIDEODRIVER=directfb
-
-font=$(fc-match --format=%{file} DejaVuSans.tff)
-
-charging_sdl -wcreapf $font
+export SDL_VIDEODRIVER=kmsdrm
+charging_sdl -ea
 
 retreason=$?
 
