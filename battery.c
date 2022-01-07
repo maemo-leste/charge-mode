@@ -79,7 +79,6 @@ int_string(char *str, int *val)
  *    The first reference found on the web seems to be a forum post
  *    by "SilverFox" from 04-16-2008. It appears to be attributed to Sanyo.
  *    http://www.candlepowerforums.com/vb/showthread.php?115871-Li-Ion-State-of-Charge-and-Voltage-Measurements#post2440539
- *    The linear interpplation below 19.66% was suggested by Pavel Machek.
  *
  * @mV: voltage measured outside the battery
  * @mA: current flowing out of the battery
@@ -97,9 +96,9 @@ static inline int fuel_level_LiIon(int mV, int mA, int mOhm)
 	/* apply first part of formula */
 	u = 3870000 - (14523 * (37835 - 10 * mV));
 
-	/* use linear approx. below 3.756V => 19.66% assuming 3.3V => 0% */
+	/* use linear approx. below 3.756V => 50.00% assuming 3.3V => 0% */
 	if (u < 0) {
-		int a = (((mV - 3300)*1000) / 456) * 1966;
+		int a = (((mV - 3300)*1000) / 456) * 5000;
 		return max(a / 100000, 0);
 	}
 
@@ -116,12 +115,10 @@ double battery_estimate(struct battery_info *i)
 {
 	int mA = 100;
 
-	if (!isnan(i->current)) {
+	if (!isnan(i->current))
 		mA = i->current * 1000;
-		printf("Have current %d mA\n", mA);
-	}
 
-	return fuel_level_LiIon(i->voltage * 1000, mA, 50) / 100.;
+	return fuel_level_LiIon(i->voltage * 1000, mA, 150) / 100.;
 }
 
 bool
@@ -242,7 +239,6 @@ battery_fill_info(struct battery_info *i)
 			}
 
 			if (choose) {
-				printf("choosen: %s\n", name);
 				if (secs != -1)
 					i->seconds = secs;
 				else
