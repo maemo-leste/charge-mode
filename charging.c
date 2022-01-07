@@ -23,6 +23,13 @@
 
 #define RTC_DEVICE "/dev/rtc0"
 
+#define CHECK_CREATE_SUCCESS(obj)                               \
+    if (!obj) {                                                 \
+        ERROR("failed to allocate object: %s", SDL_GetError()); \
+        SDL_Quit();                                             \
+        exit(-1);                                                \
+    }
+
 enum {
     EXIT_BOOT = 0,
     EXIT_SHUTDOWN = 1,
@@ -193,7 +200,7 @@ int main(int argc, char** argv)
             SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
             0, 0, SDL_WINDOW_FULLSCREEN | SDL_WINDOW_SHOWN);
     }
-    //CHECK_CREATE_SUCCESS(window);
+    CHECK_CREATE_SUCCESS(window);
 
     if (SDL_ShowCursor(SDL_DISABLE) < 0 )
         LOG("WARNING", "Failed to disable cursor");
@@ -202,14 +209,14 @@ int main(int argc, char** argv)
 
     LOG("INFO", "creating general renderer");
     renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_SOFTWARE);
-    //CHECK_CREATE_SUCCESS(renderer);
+    CHECK_CREATE_SUCCESS(renderer);
 
     SDL_Rect battery_rect;
     make_battery_rect(screen_w, screen_h, &battery_rect);
 
     LOG("INFO", "creating icon bitmaps");
     battery_icon = make_battery_icon(battery_rect, screen_w, screen_h);
-    //CHECK_CREATE_SUCCESS(battery_icon);
+    CHECK_CREATE_SUCCESS(battery_icon);
 
     SDL_Rect is_charging_area = {
         .x = 0,
@@ -219,14 +226,14 @@ int main(int argc, char** argv)
     };
 
     lightning_icon = make_lightning_icon(is_charging_area.w, is_charging_area.h);
-    //CHECK_CREATE_SUCCESS(battery_icon);
+    CHECK_CREATE_SUCCESS(battery_icon);
 
     LOG("INFO", "creating textures from icons");
     SDL_Texture* battery_icon_texture = SDL_CreateTextureFromSurface(renderer, battery_icon);
-    //CHECK_CREATE_SUCCESS(battery_icon_texture);
+    CHECK_CREATE_SUCCESS(battery_icon_texture);
 
     SDL_Texture* lightning_icon_texture = SDL_CreateTextureFromSurface(renderer, lightning_icon);
-    //CHECK_CREATE_SUCCESS(lightning_icon_texture);
+    CHECK_CREATE_SUCCESS(lightning_icon_texture);
 
     SDL_RenderClear(renderer);
 
