@@ -17,11 +17,10 @@ int draw_line(SDL_Surface* surf, Uint32 c, int x, int y, int x1, int y1);
 
 /**
   create a battery icon to fit within a specific area
-  @param w the width the battery must fit in
-  @param h the height the battery must fit in
-  @returns returns a battery icon, its surface's width and height are equal to w and h
+  @param bat_rect the SDL_Rect the battery must fit in
+  @returns returns a battery icon, its surface's width and height are equal to bat_rect
 */
-SDL_Surface* make_battery_icon(int w, int h);
+SDL_Surface* make_battery_icon(SDL_Rect bat_rect, int w, int h);
 
 /**
   create a lightning bolt icon, the icon will fit within w and h without being stretched

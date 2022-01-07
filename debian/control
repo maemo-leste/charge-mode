@@ -5,7 +5,6 @@ Maintainer: Uvos <carl@uvos.xyz>
 Build-Depends:
  debhelper-compat (= 12),
  libsdl2-dev,
- libsdl2-ttf-dev,
 Standards-Version: 4.3.0
 
 Package: charge-mode
@@ -13,7 +12,4 @@ Architecture: any
 Multi-arch: same
 Depends: ${shlibs:Depends}, ${misc:Depends},
  openrc,
- fontconfig,
- fonts-dejavu-core,
- xinit,
 Description: This provides charging mode runlevel and interface on Leste devices
