@@ -17,7 +17,7 @@
 #include "log.h"
 #include "backlight.h"
 
-#define CHARGING_SDL_VERSION "0.1.0"
+#define CHARGING_SDL_VERSION "1.2"
 
 #define SCREENTIME 5
 
