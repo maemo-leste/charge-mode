@@ -1,6 +1,7 @@
 #!/bin/sh
 
 export SDL_VIDEODRIVER=kmsdrm
+export SDL_RENDER_DRIVER=opengles2
 charging_sdl -ea
 
 retreason=$?
