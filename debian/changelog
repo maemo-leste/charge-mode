@@ -1,3 +1,7 @@
+charge-mode (1.2.2) unstable; urgency=medium
+  * Fix battery rendering wrong when estimation places its charge level below 0%
+ -- Uvos <carl@uvos.xyz>  Sun, 20 Mar 2022 21:00:00 +0100
+
 charge-mode (1.2.1) unstable; urgency=medium
   * Force GLESv2
  -- Uvos <carl@uvos.xyz>  Mon, 14 Sep 2022 19:00:00 +0100
