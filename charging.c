@@ -11,6 +11,7 @@
 #include <time.h>
 
 #include <unistd.h>
+#include <GLES2/gl2.h>
 
 #include "battery.h"
 #include "draw.h"
@@ -212,8 +213,10 @@ int main(int argc, char** argv)
     LOG("INFO" "using video driver: %s", SDL_GetCurrentVideoDriver());
 
     LOG("INFO", "creating general renderer");
-    renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_SOFTWARE);
+    renderer = SDL_CreateRenderer(window, -1, 0);
     CHECK_CREATE_SUCCESS(renderer);
+
+    LOG("INFO", glGetString(GL_RENDERER));
 
     SDL_Rect battery_rect;
     make_battery_rect(screen_w, screen_h, &battery_rect);

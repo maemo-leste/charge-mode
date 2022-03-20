@@ -263,6 +263,8 @@ battery_fill_info(struct battery_info *i)
 
 				if (isnan(i->fraction) || i->fraction > 100 || i->fraction < 0)
 					i->fraction = battery_estimate(i);
+				if (isnan(i->fraction) || i->fraction > 100 || i->fraction < 0)
+					i->fraction = 0;
 			}
 		}
 
