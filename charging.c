@@ -256,44 +256,50 @@ int main(int argc, char** argv)
 
     int *keys;
 
+    bool displayOn = true;
+
     char percent_text[4];
     char current_text[6];
     while (running) {
-        SDL_RenderClear(renderer);
-
         update_bat_info(&bat_info);
 
-        SDL_RenderCopy(renderer, battery_icon_texture, NULL, NULL);
+        if (displayOn) {
+            SDL_RenderClear(renderer);
 
-            sprintf(percent_text, "%02d%%", bat_info.percent);
-        if (bat_info.is_charging) {
-            SDL_RenderCopy(renderer, lightning_icon_texture, NULL, &is_charging_area);
-            last_charging = SDL_GetTicks();
-        } else if (flag_exit && SDL_GetTicks() - last_charging >= 2000) {
-                retreason = EXIT_SHUTDOWN;
-                running = false;
+            SDL_RenderCopy(renderer, battery_icon_texture, NULL, NULL);
+
+                sprintf(percent_text, "%02d%%", bat_info.percent);
+            if (bat_info.is_charging) {
+                SDL_RenderCopy(renderer, lightning_icon_texture, NULL, &is_charging_area);
+                last_charging = SDL_GetTicks();
+            } else if (flag_exit && SDL_GetTicks() - last_charging >= 2000) {
+                    retreason = EXIT_SHUTDOWN;
+                    running = false;
+            }
+
+            if (flag_oled) {
+                SDL_SetRenderDrawColor(renderer, 128, 128, 128, 255);
+                SDL_RenderFillRect(renderer, &oled_rect);
+                move_oled_rect(screen_w, screen_h, &oled_rect);
+            }
+
+            SDL_Rect bat_ch_rect;
+            bat_ch_rect.x = battery_rect.x + battery_rect.h * 0.05;
+            bat_ch_rect.y = battery_rect.y + battery_rect.h * (100 - bat_info.percent)/100.0f + battery_rect.h * 0.05;
+            if (bat_ch_rect.y > (bat_ch_rect.y+battery_rect.h-battery_rect.h * 0.05))
+                bat_ch_rect.y = bat_ch_rect.y+battery_rect.h-battery_rect.h * 0.05;
+            bat_ch_rect.h = battery_rect.h - bat_ch_rect.y + battery_rect.y - battery_rect.h * 0.05;
+            bat_ch_rect.w = battery_rect.w - battery_rect.h * 0.1;
+
+            SDL_SetRenderDrawColor(renderer, (100-bat_info.percent)/100.0f*255, bat_info.percent/100.0f*255, 0, 255);
+            SDL_RenderFillRect(renderer, &bat_ch_rect);
+
+            SDL_RenderPresent(renderer);
         }
-
-        if (flag_oled) {
-            SDL_SetRenderDrawColor(renderer, 128, 128, 128, 255);
-            SDL_RenderFillRect(renderer, &oled_rect);
-            move_oled_rect(screen_w, screen_h, &oled_rect);
-        }
-
-        SDL_Rect bat_ch_rect;
-        bat_ch_rect.x = battery_rect.x + battery_rect.h * 0.05;
-        bat_ch_rect.y = battery_rect.y + battery_rect.h * (100 - bat_info.percent)/100.0f + battery_rect.h * 0.05;
-        bat_ch_rect.h = battery_rect.h - bat_ch_rect.y + battery_rect.y - battery_rect.h * 0.05;
-        bat_ch_rect.w = battery_rect.w - battery_rect.h * 0.1;
-
-        SDL_SetRenderDrawColor(renderer, (100-bat_info.percent)/100.0f*255, bat_info.percent/100.0f*255, 0, 255);
-        SDL_RenderFillRect(renderer, &bat_ch_rect);
-
-        SDL_RenderPresent(renderer);
         while (SDL_PollEvent(&ev)){
             if (ev.type == SDL_KEYDOWN) {
                 /* Droid 4 power button registers as 1073741824 this is a sdl bug*/
-                if(ev.key.keysym.sym == SDLK_POWER || ev.key.keysym.sym == 1073741824) {
+                if((ev.key.keysym.sym == SDLK_POWER || ev.key.keysym.sym == 1073741824) && bat_info.percent > 10) {
                     retreason = EXIT_BOOT;
                     running = false;
                     break;
@@ -302,6 +308,7 @@ int main(int argc, char** argv)
                     char buf[256] = "";
                     int len = snprintf(buf, 256, "%i", max_brightness);
                     write(brightness_file, buf, len < 256 ? len : 256);
+                    displayOn = true;
                 }
                 start = SDL_GetTicks();
             }
@@ -311,9 +318,9 @@ int main(int argc, char** argv)
             if(brightness_file >= 0) {
                 char buf = '0';
                 write(brightness_file, &buf, 1);
+                displayOn = false;
             }
         }
-        SDL_RenderClear(renderer);
     }
 
     SDL_FreeSurface(lightning_icon);
