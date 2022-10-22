@@ -57,7 +57,8 @@ void usage(char* appname)
     -o: prevent burn-in on OLED screens\n\
     -e: exit immediately if not charging\n\
     -a: exit on rtc alarm\n\
-    -w: run in window\n",
+    -w: run in window\n\
+    -t: use mock battery\n",
         appname, appname);
 }
 
@@ -99,26 +100,50 @@ int set_alarm_from_rtc(int rtc_fd)
     return 0;
 }
 
-void update_bat_info(struct battery_device* dev)
+void update_bat_info(struct battery_device* dev, bool mock)
 {
-    struct battery_info bat;
-    if (battery_fill_info(&bat)) {
-        dev->current = bat.current;
-        if (!isfinite(bat.fraction)) {
-            dev->percent = -1;
-        } else {
-            dev->percent = (int)(bat.fraction * 100.0);
+    if(!mock)
+    {
+        struct battery_info bat;
+        if (battery_fill_info(&bat)) {
+            dev->current = bat.current;
+            if (!isfinite(bat.fraction) || bat.fraction <= 0) {
+                dev->percent = 1;
+            } else {
+                dev->percent = (int)(bat.fraction * 100.0);
+            }
+            dev->is_charging = bat.source == USB;
         }
-        dev->is_charging = bat.source == USB;
+    }
+    else
+    {
+        static int state = 0;
+        const int percents[] = {50, 90, 10, 0, 1, -1, 100};
+        LOG("INFO", "mock percentage: %i", percents[state]);
+        dev->is_charging = true;
+        dev->current = -10;
+        dev->percent = percents[state++];
+        if(state > (sizeof(percents)/sizeof(percents[0]))-1)
+            state = 0;
+
     }
 }
+
+struct config
+{
+    bool flag_oled:1;
+    bool flag_exit:1;
+    bool flag_alarm:1;
+    bool flag_window:1;
+    bool flag_mock_bat:1;
+};
 
 int main(int argc, char** argv)
 {
     SDL_LogSetPriority(SDL_LOG_CATEGORY_VIDEO ,SDL_LOG_PRIORITY_DEBUG);
     LOG("INFO", "charging-sdl version %s", CHARGING_SDL_VERSION);
 
-    char flag_oled = 0, flag_exit = 0, flag_alarm = 0, flag_window=0;
+    struct config config = {0};
 
     int screen_w = 540;
     int screen_h = 960;
@@ -138,19 +163,22 @@ int main(int argc, char** argv)
     signal(SIGALRM, alarm_handler);
 
     int opt;
-    while ((opt = getopt(argc, argv, "oeaw")) != -1) {
+    while ((opt = getopt(argc, argv, "oeawt")) != -1) {
         switch (opt) {
         case 'o':
-            flag_oled = 1;
+            config.flag_oled = true;
             break;
         case 'e':
-            flag_exit = 1;
+            config.flag_exit = true;
             break;
         case 'a':
-            flag_alarm = 1;
+            config.flag_alarm = true;
             break;
         case 'w':
-            flag_window = 1;
+            config.flag_window = true;
+            break;
+        case 't':
+            config.flag_mock_bat = true;
             break;
         default:
             usage(argv[0]);
@@ -168,8 +196,8 @@ int main(int argc, char** argv)
     if(rtc_fd >= 0)
         close(rtc_fd);
 
-    if (flag_exit) {
-        update_bat_info(&bat_info);
+    if (config.flag_exit) {
+        update_bat_info(&bat_info, config.flag_mock_bat);
         if (!bat_info.is_charging)
             return retreason;
     }
@@ -186,7 +214,7 @@ int main(int argc, char** argv)
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
 
-    if (flag_window) {
+    if (config.flag_window) {
         LOG("INFO", "creating test window");
         window = SDL_CreateWindow("Charge - Test Mode",
             SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
@@ -249,7 +277,7 @@ int main(int argc, char** argv)
     Uint32 last_charging = SDL_GetTicks();
 
     SDL_Rect oled_rect;
-    if (flag_oled) {
+    if (config.flag_oled) {
         srand(time(NULL));
         make_oled_rect(screen_h, &oled_rect);
     }
@@ -261,9 +289,9 @@ int main(int argc, char** argv)
     char percent_text[4];
     char current_text[6];
     while (running) {
-        update_bat_info(&bat_info);
 
         if (displayOn) {
+            update_bat_info(&bat_info, config.flag_mock_bat);
             SDL_RenderClear(renderer);
 
             SDL_RenderCopy(renderer, battery_icon_texture, NULL, NULL);
@@ -272,12 +300,12 @@ int main(int argc, char** argv)
             if (bat_info.is_charging) {
                 SDL_RenderCopy(renderer, lightning_icon_texture, NULL, &is_charging_area);
                 last_charging = SDL_GetTicks();
-            } else if (flag_exit && SDL_GetTicks() - last_charging >= 2000) {
+            } else if (config.flag_exit && SDL_GetTicks() - last_charging >= 2000) {
                     retreason = EXIT_SHUTDOWN;
                     running = false;
             }
 
-            if (flag_oled) {
+            if (config.flag_oled) {
                 SDL_SetRenderDrawColor(renderer, 128, 128, 128, 255);
                 SDL_RenderFillRect(renderer, &oled_rect);
                 move_oled_rect(screen_w, screen_h, &oled_rect);
@@ -285,19 +313,20 @@ int main(int argc, char** argv)
 
             SDL_Rect bat_ch_rect;
             bat_ch_rect.x = battery_rect.x + battery_rect.h * 0.05;
-            bat_ch_rect.y = battery_rect.y + battery_rect.h * (100 - bat_info.percent)/100.0f + battery_rect.h * 0.05;
-            if (bat_ch_rect.y > (bat_ch_rect.y+battery_rect.h-battery_rect.h * 0.05))
-                bat_ch_rect.y = bat_ch_rect.y+battery_rect.h-battery_rect.h * 0.05;
+            bat_ch_rect.y = battery_rect.y + (battery_rect.h*0.90) * (100 - bat_info.percent)/100.0f + battery_rect.h * 0.05;
             bat_ch_rect.h = battery_rect.h - bat_ch_rect.y + battery_rect.y - battery_rect.h * 0.05;
             bat_ch_rect.w = battery_rect.w - battery_rect.h * 0.1;
 
             SDL_SetRenderDrawColor(renderer, (100-bat_info.percent)/100.0f*255, bat_info.percent/100.0f*255, 0, 255);
             SDL_RenderFillRect(renderer, &bat_ch_rect);
 
+            if(config.flag_window)
+                LOG("INFO", "refresh");
             SDL_RenderPresent(renderer);
         }
-        while (SDL_PollEvent(&ev)){
+        while (SDL_PollEvent(&ev)) {
             if (ev.type == SDL_KEYDOWN) {
+                update_bat_info(&bat_info, config.flag_mock_bat);
                 /* Droid 4 power button registers as 1073741824 this is a sdl bug*/
                 if((ev.key.keysym.sym == SDLK_POWER || ev.key.keysym.sym == 1073741824) && bat_info.percent > 10) {
                     retreason = EXIT_BOOT;
