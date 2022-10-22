@@ -1,3 +1,7 @@
+charge-mode (1.2.4) unstable; urgency=medium
+  * Dont needlessly update the battery information struct while the screen is off
+ -- Uvos <carl@uvos.xyz>  Tue, 22 Oct 2022 23:30:00 +0100
+
 charge-mode (1.2.3) unstable; urgency=medium
   * Dont waste power rendering the screen when its off
  -- Uvos <carl@uvos.xyz>  Tue, 18 Oct 2022 21:00:00 +0100
