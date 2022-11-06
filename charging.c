@@ -286,8 +286,6 @@ int main(int argc, char** argv)
 
     bool displayOn = true;
 
-    char percent_text[4];
-    char current_text[6];
     while (running) {
 
         if (displayOn) {
@@ -296,13 +294,12 @@ int main(int argc, char** argv)
 
             SDL_RenderCopy(renderer, battery_icon_texture, NULL, NULL);
 
-                sprintf(percent_text, "%02d%%", bat_info.percent);
             if (bat_info.is_charging) {
                 SDL_RenderCopy(renderer, lightning_icon_texture, NULL, &is_charging_area);
                 last_charging = SDL_GetTicks();
             } else if (config.flag_exit && SDL_GetTicks() - last_charging >= 2000) {
-                    retreason = EXIT_SHUTDOWN;
-                    running = false;
+                retreason = EXIT_SHUTDOWN;
+                running = false;
             }
 
             if (config.flag_oled) {
