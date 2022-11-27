@@ -289,9 +289,9 @@ int main(int argc, char** argv)
     bool displayOn = true;
 
     while (running) {
+        update_bat_info(&bat_info, config.flag_mock_bat);
 
         if (displayOn) {
-            update_bat_info(&bat_info, config.flag_mock_bat);
             SDL_RenderClear(renderer);
 
             SDL_RenderCopy(renderer, battery_icon_texture, NULL, NULL);
