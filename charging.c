@@ -113,6 +113,8 @@ void update_bat_info(struct battery_device* dev, bool mock)
                 dev->percent = (int)(bat.fraction * 100.0);
             }
             dev->is_charging = bat.source == USB;
+    } else {
+        LOG("WARN", "Could not read battery");
         }
     }
     else
@@ -153,7 +155,7 @@ int main(int argc, char** argv)
     SDL_Window* window;
     SDL_Renderer* renderer;
 
-    struct battery_device bat_info;
+    struct battery_device bat_info = {};
     SDL_Surface* battery_icon;
     SDL_Surface* lightning_icon;
 
