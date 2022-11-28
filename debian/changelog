@@ -1,3 +1,11 @@
+charge-mode (1.2.5) unstable; urgency=medium
+  * remove some unused vars
+  * Log if battery reading fails
+  * use sw rendering (might help with d4 hang)
+  * allways update battery info (to avoid usb lead unplugg not shuting device off until display lights)
+  * fix battery display when the battery is callibrated
+ -- Uvos <carl@uvos.xyz>  Mon, 28 Nov 2022 20:30:00 +0100
+
 charge-mode (1.2.4) unstable; urgency=medium
   * Dont needlessly update the battery information struct while the screen is off
  -- Uvos <carl@uvos.xyz>  Tue, 22 Oct 2022 23:30:00 +0100
