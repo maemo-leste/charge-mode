@@ -20,8 +20,8 @@
 #include <dirent.h>
 #include <unistd.h>
 
-
 #include "battery.h"
+#include "log.h"
 
 #define max(a, b) \
   ({ __typeof__ (a) _a = (a); \
@@ -114,11 +114,13 @@ static inline int fuel_level_LiIon(int mV, int mA, int mOhm)
 double battery_estimate(struct battery_info *i)
 {
 	int mA = 100;
+	int mV = i->voltage * 1000;
 
 	if (!isnan(i->current))
 		mA = i->current * 1000;
 
-	return fuel_level_LiIon(i->voltage * 1000, mA, 150) / 100.;
+	LOG("INFO", "Running SOC estimation for %dmV and %dmA", mV, mA);
+	return fuel_level_LiIon(mV, mA, 150) / 100.;
 }
 
 bool
@@ -229,7 +231,7 @@ battery_fill_info(struct battery_info *i)
 			*/
 
 			if ((secs < 0) && (isnan(i->seconds))) {
-			if ((pct < 0) && (isnan(i->fraction))) {
+				if (isnan(i->fraction)) {
 					choose = true;  /* at least we know there's a battery. */
 				} else if (pct > i->fraction * 100) {
 					choose = true;

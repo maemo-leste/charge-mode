@@ -105,16 +105,19 @@ void update_bat_info(struct battery_device* dev, bool mock)
     if(!mock)
     {
         struct battery_info bat;
+        LOG("INFO", "Reading Battery");
         if (battery_fill_info(&bat)) {
             dev->current = bat.current;
             if (!isfinite(bat.fraction) || bat.fraction <= 0) {
                 dev->percent = 1;
+                LOG("WARN", "Battery Percent out of range");
             } else {
                 dev->percent = (int)(bat.fraction * 100.0);
             }
+            LOG("INFO", "Battery Percent: %d", dev->percent);
             dev->is_charging = bat.source == USB;
-    } else {
-        LOG("WARN", "Could not read battery");
+        } else {
+            LOG("WARN", "Could not read battery");
         }
     }
     else
@@ -319,8 +322,6 @@ int main(int argc, char** argv)
             SDL_SetRenderDrawColor(renderer, (100-bat_info.percent)/100.0f*255, bat_info.percent/100.0f*255, 0, 255);
             SDL_RenderFillRect(renderer, &bat_ch_rect);
 
-            if(config.flag_window)
-                LOG("INFO", "refresh");
             SDL_RenderPresent(renderer);
         }
         while (SDL_PollEvent(&ev)) {
