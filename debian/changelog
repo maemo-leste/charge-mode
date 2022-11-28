@@ -1,3 +1,7 @@
+charge-mode (1.2.6) unstable; urgency=medium
+  * revert back to opengles2, otherwise sdl tries to use the wrong drm node
+ -- Uvos <carl@uvos.xyz>  Mon, 28 Nov 2022 21:30:00 +0100
+
 charge-mode (1.2.5) unstable; urgency=medium
   * remove some unused vars
   * Log if battery reading fails
