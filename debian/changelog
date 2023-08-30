@@ -1,3 +1,9 @@
+charge-mode (1.3) unstable; urgency=medium
+  * boot when > 10% battery
+  * allow booting with > 5% battery
+  * flash battery when booting is prohibited
+ -- Uvos <carl@uvos.xyz>  Wed, 30 Aug 2023 13:00:47 +0200
+
 charge-mode (1.2.6) unstable; urgency=medium
   * revert back to opengles2, otherwise sdl tries to use the wrong drm node
  -- Uvos <carl@uvos.xyz>  Mon, 28 Nov 2022 21:30:00 +0100
