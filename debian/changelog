@@ -1,3 +1,7 @@
+charge-mode (1.3.1) unstable; urgency=medium
+  * fix -b command not being recongnized
+ -- Uvos <carl@uvos.xyz>  Fri, 08 Dec 2023 22:30:18 +0100
+
 charge-mode (1.3) unstable; urgency=medium
   * boot when > 10% battery
   * allow booting with > 5% battery
