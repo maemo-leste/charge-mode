@@ -60,8 +60,8 @@ void usage(char* appname)
     -a: exit on rtc alarm\n\
     -w: run in window\n\
     -t: use mock battery\n\
-    -b: autoboot when battery is > 20%\n",
-        appname, appname);
+    -b: autoboot when battery is > 20%%\n",
+        appname);
 }
 
 struct battery_device {
@@ -171,7 +171,7 @@ int main(int argc, char** argv)
     signal(SIGALRM, alarm_handler);
 
     int opt;
-    while ((opt = getopt(argc, argv, "oeawt")) != -1) {
+    while ((opt = getopt(argc, argv, "obeawt")) != -1) {
         switch (opt) {
         case 'o':
             config.flag_oled = true;
