@@ -311,11 +311,12 @@ int main(int argc, char** argv)
             if (bat_info.is_charging) {
                 SDL_RenderCopy(renderer, lightning_icon_texture, NULL, &is_charging_area);
                 last_charging = SDL_GetTicks();
+                if(config.flag_autoboot && bat_info.percent > 20) {
+                    retreason = EXIT_BOOT;
+                    running = false;
+                }
             } else if (config.flag_exit && SDL_GetTicks() - last_charging >= 2000) {
                 retreason = EXIT_SHUTDOWN;
-                running = false;
-            } else if(config.flag_autoboot && bat_info.percent > 10) {
-                retreason = EXIT_BOOT;
                 running = false;
             }
 
